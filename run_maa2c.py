@@ -15,7 +15,7 @@ import sys
 
 MAX_EPISODES = 5000
 EPISODES_BEFORE_TRAIN = 0
-EVAL_EPISODES = 10
+EVAL_EPISODES = 1
 EVAL_INTERVAL = 1
 
 # roll out n steps
@@ -109,6 +109,7 @@ def run(arglist):
     act_shape_n = [env.action_space[i].n for i in range(env.n)]
 
     maa2c = MAA2C(env, env.n, obs_shape_n, act_shape_n)
+    maa2c_eval = MAA2C(env_eval, env_eval.n, obs_shape_n, act_shape_n)
     # trainers = get_trainers(env)
 
     # env = gym.make(env_id)
@@ -137,12 +138,13 @@ def run(arglist):
         maa2c.interact()
         if maa2c.n_episodes >= EPISODES_BEFORE_TRAIN:
             maa2c.train()
-        # if maa2c.episode_done and ((maa2c.n_episodes+1)%EVAL_INTERVAL == 0):
-        #     rewards, _ = maa2c.evaluation(env_eval, EVAL_EPISODES)
-        #     rewards_mu, rewards_std = agg_double_list(rewards)
-        #     print("Episode %d, Average Reward %.2f" % (maa2c.n_episodes+1, rewards_mu))
-        #     episodes.append(maa2c.n_episodes+1)
-        #     eval_rewards.append(rewards_mu)
+        if maa2c.episode_done and ((maa2c.n_episodes)%EVAL_INTERVAL == 0):
+            rewards, _ = maa2c_eval.evaluation(env_eval, EVAL_EPISODES)
+            rewards_mu, rewards_std = agg_double_list(rewards)
+            print(rewards)
+            print("Episode %d, Average Reward %.2f, STD %.2f" % (maa2c.n_episodes, rewards_mu, rewards_std))
+            episodes.append(maa2c.n_episodes)
+            eval_rewards.append(rewards_mu)
 
     # episodes = np.array(episodes)
     # eval_rewards = np.array(eval_rewards)

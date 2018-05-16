@@ -3,6 +3,11 @@ import torch as th
 from torch import nn
 
 
+def set_init(layers):
+    for layer in layers:
+        nn.init.normal(layer.weight, mean=0., std=0.1)
+        nn.init.constant(layer.bias, 0.0)
+
 class ActorNetwork(nn.Module):
     """
     A network for actor
@@ -15,10 +20,15 @@ class ActorNetwork(nn.Module):
         # activation function for the output
         self.output_act = output_act
 
+        set_init([self.fc1])
+        set_init([self.fc2])
+        set_init([self.fc3])
+
     def __call__(self, state):
         out = nn.functional.relu(self.fc1(state))
         out = nn.functional.relu(self.fc2(out))
         out = self.output_act(self.fc3(out))
+
         return out
 
 
@@ -31,6 +41,10 @@ class CriticNetwork(nn.Module):
         self.fc1 = nn.Linear(state_dim, hidden_size)
         self.fc2 = nn.Linear(hidden_size + action_dim, hidden_size)
         self.fc3 = nn.Linear(hidden_size, output_size)
+
+        set_init([self.fc1])
+        set_init([self.fc2])
+        set_init([self.fc3])
 
     def __call__(self, state, action):
         out = nn.functional.relu(self.fc1(state))

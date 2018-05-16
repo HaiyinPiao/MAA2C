@@ -166,17 +166,21 @@ class Agent(object):
             rewards_i = []
             infos_i = []
             state = env.reset()
-            action = self.action(state)
+            action = self.eval_action(state)
             state, reward, done, info = env.step(action)
             done = done[0] if isinstance(done, list) else done
             rewards_i.append(reward)
             infos_i.append(info)
             while not done:
-                action = self.action(state)
+                action = self.eval_action(state)
                 state, reward, done, info = env.step(action)
-                done = done[0] if isinstance(done, list) else done
+                # done = done[0] if isinstance(done, list) else done
+                env.render()
                 rewards_i.append(reward)
                 infos_i.append(info)
+                if (self.max_steps is not None) and (self.n_steps >= self.max_steps):
+                    terminal = True
+                    break
             rewards.append(rewards_i)
             infos.append(infos_i)
         return rewards, infos

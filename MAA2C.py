@@ -62,13 +62,13 @@ class MAA2C(Agent):
     """
     def __init__(self, env, n_agents, obs_shape_n, act_shape_n,
                  memory_capacity=10000, max_steps=100,
-                 roll_out_n_steps=10,
+                 roll_out_n_steps=30,
                  reward_gamma=0.99, reward_scale=1., done_penalty=None,
                  actor_hidden_size=32, critic_hidden_size=32,
                  actor_output_act=nn.functional.log_softmax, critic_loss="mse",
                  actor_lr=0.0001, critic_lr=0.0002,
                  optimizer_type="rmsprop", entropy_reg=0.01,
-                 max_grad_norm=0.5, batch_size=100, episodes_before_train=100,
+                 max_grad_norm=0.5, batch_size=1000, episodes_before_train=5,
                  epsilon_start=0.9, epsilon_end=0.01, epsilon_decay=200,
                  use_cuda=True, training_strategy="centralized",
                  actor_parameter_sharing=False, critic_parameter_sharing=False):
@@ -195,17 +195,17 @@ class MAA2C(Agent):
         for agent_id in range(self.n_agents):
             rewards[:,agent_id] = self._discount_reward(rewards[:,agent_id], final_r[agent_id])
         rewards = rewards.tolist()
-        print(rewards)
+        # print(rewards)
         self.n_steps += 1
         self.memory.push(states, actions, rewards)
 
         # print(actions)
-        # print(rewards)
+        # print(np.mean(rewards))
 
     # train on a roll out batch
     def train(self):
         if self.n_episodes <= self.episodes_before_train:
-            pass
+            return
 
         batch = self.memory.sample(self.batch_size)
         # states_var = to_tensor_var(batch.states, self.use_cuda).view(-1, self.n_agents, self.state_dim)
@@ -213,9 +213,9 @@ class MAA2C(Agent):
         # print(batch)
         states_var = to_tensor_var(batch.states, self.use_cuda).view(-1, self.n_agents, self.obs_shape_n[0])
         # print( batch.states )
-        # print(states_var)
         # print( "------------------------------------------" )
-        # print( batch.actions )
+        # print(states_var)
+
         # print( batch.rewards )
         # print( self.act_shape_n[0] )
         actions_var = to_tensor_var(batch.actions, self.use_cuda).view(-1, self.n_agents, self.act_shape_n[0])
@@ -226,9 +226,12 @@ class MAA2C(Agent):
         whole_states_var = states_var.view(-1, self.whole_critic_state_dim)
         whole_actions_var = actions_var.view(-1, self.whole_critic_action_dim)
 
+        # print( states_var )
+
         for agent_id in range(self.n_agents):
             # update actor network
             self.actor_optimizers[agent_id].zero_grad()
+            # print(states_var[:,agent_id,:])
             action_log_probs = self.actors[agent_id](states_var[:,agent_id,:])
             entropy_loss = th.mean(entropy(th.exp(action_log_probs)))
             action_log_probs = th.sum(action_log_probs * actions_var[:,agent_id,:], 1)
@@ -361,3 +364,14 @@ class MAA2C(Agent):
             else:
                 values[agent_id] = value_var.data.numpy()[0]
         return values
+
+    def eval_action(self, state):
+        actions = [0]*self.n_agents
+        one_hot_actions = []
+
+        softmax_actions = self._softmax_action(state)
+        for agent_id in range(self.n_agents):
+            # print(softmax_actions[agent_id])
+            actions[agent_id] = np.argmax(softmax_actions[agent_id])
+            one_hot_actions.append(index_to_one_hot(actions[agent_id],self.act_shape_n[agent_id]))
+        return one_hot_actions
