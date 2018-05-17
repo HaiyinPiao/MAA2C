@@ -14,19 +14,19 @@ import sys
 
 
 MAX_EPISODES = 5000
-EPISODES_BEFORE_TRAIN = 0
+EPISODES_BEFORE_TRAIN = 1
 EVAL_EPISODES = 1
 EVAL_INTERVAL = 1
 
 # roll out n steps
-ROLL_OUT_N_STEPS = 10
+ROLL_OUT_N_STEPS = 25
 # only remember the latest ROLL_OUT_N_STEPS
 MEMORY_CAPACITY = ROLL_OUT_N_STEPS
 # only use the latest ROLL_OUT_N_STEPS for training A2C
 BATCH_SIZE = ROLL_OUT_N_STEPS
 
 REWARD_DISCOUNTED_GAMMA = 0.99
-ENTROPY_REG = 0.00
+ENTROPY_REG = 0.01
 #
 DONE_PENALTY = -10.
 
@@ -37,7 +37,7 @@ EPSILON_START = 0.99
 EPSILON_END = 0.05
 EPSILON_DECAY = 500
 
-RANDOM_SEED = 2017
+RANDOM_SEED = 2018
 
 def parse_args():
     parser = argparse.ArgumentParser("Reinforcement Learning experiments for multiagent environments")
@@ -109,7 +109,7 @@ def run(arglist):
     act_shape_n = [env.action_space[i].n for i in range(env.n)]
 
     maa2c = MAA2C(env, env.n, obs_shape_n, act_shape_n)
-    maa2c_eval = MAA2C(env_eval, env_eval.n, obs_shape_n, act_shape_n)
+    # maa2c_eval = MAA2C(env_eval, env_eval.n, obs_shape_n, act_shape_n)
     # trainers = get_trainers(env)
 
     # env = gym.make(env_id)
@@ -136,12 +136,13 @@ def run(arglist):
     eval_rewards =[]
     while maa2c.n_episodes < MAX_EPISODES:
         maa2c.interact()
-        if maa2c.n_episodes >= EPISODES_BEFORE_TRAIN:
-            maa2c.train()
+        # if maa2c.n_episodes >= EPISODES_BEFORE_TRAIN:
+        #     maa2c.train()
+        maa2c.train()
         if maa2c.episode_done and ((maa2c.n_episodes)%EVAL_INTERVAL == 0):
-            rewards, _ = maa2c_eval.evaluation(env_eval, EVAL_EPISODES)
+            rewards, _ = maa2c.evaluation(env_eval, EVAL_EPISODES)
             rewards_mu, rewards_std = agg_double_list(rewards)
-            print(rewards)
+            # print(rewards)
             print("Episode %d, Average Reward %.2f, STD %.2f" % (maa2c.n_episodes, rewards_mu, rewards_std))
             episodes.append(maa2c.n_episodes)
             eval_rewards.append(rewards_mu)

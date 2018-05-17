@@ -163,6 +163,8 @@ class Agent(object):
         rewards = []
         infos = []
         for i in range(eval_episodes):
+            step = 0
+            
             rewards_i = []
             infos_i = []
             state = env.reset()
@@ -171,15 +173,20 @@ class Agent(object):
             done = done[0] if isinstance(done, list) else done
             rewards_i.append(reward)
             infos_i.append(info)
+
             while not done:
                 action = self.eval_action(state)
                 state, reward, done, info = env.step(action)
-                # done = done[0] if isinstance(done, list) else done
-                env.render()
+                done = done[0] if isinstance(done, list) else done
+                # env.render()
                 rewards_i.append(reward)
                 infos_i.append(info)
-                if (self.max_steps is not None) and (self.n_steps >= self.max_steps):
-                    terminal = True
+                # if (self.max_steps is not None) and (self.n_steps >= self.max_steps):
+                # print(step)
+                # print(action)
+                step += 1
+                if (self.max_steps is not None) and (step >= self.max_steps):
+                    step = 0
                     break
             rewards.append(rewards_i)
             infos.append(infos_i)

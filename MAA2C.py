@@ -66,9 +66,9 @@ class MAA2C(Agent):
                  reward_gamma=0.99, reward_scale=1., done_penalty=None,
                  actor_hidden_size=32, critic_hidden_size=32,
                  actor_output_act=nn.functional.log_softmax, critic_loss="mse",
-                 actor_lr=0.0001, critic_lr=0.0002,
+                 actor_lr=0.001, critic_lr=0.002,
                  optimizer_type="rmsprop", entropy_reg=0.01,
-                 max_grad_norm=0.5, batch_size=1000, episodes_before_train=5,
+                 max_grad_norm=0.5, batch_size=1000, episodes_before_train=1,
                  epsilon_start=0.9, epsilon_end=0.01, epsilon_decay=200,
                  use_cuda=True, training_strategy="centralized",
                  actor_parameter_sharing=False, critic_parameter_sharing=False):
@@ -227,7 +227,7 @@ class MAA2C(Agent):
         whole_actions_var = actions_var.view(-1, self.whole_critic_action_dim)
 
         # print( states_var )
-
+        # print(self.n_agents)
         for agent_id in range(self.n_agents):
             # update actor network
             self.actor_optimizers[agent_id].zero_grad()
@@ -241,9 +241,10 @@ class MAA2C(Agent):
                 values = self.critics[agent_id](whole_states_var, whole_actions_var)
             advantages = rewards_var[:,agent_id,:] - values.detach()
             pg_loss = -th.mean(action_log_probs * advantages)
-            # actor_loss = pg_loss - entropy_loss * self.entropy_reg
-            actor_loss = pg_loss
+            actor_loss = pg_loss - entropy_loss * self.entropy_reg
+            # actor_loss = pg_loss
             actor_loss.backward()
+            # print(self.actors[agent_id].parameters())
             if self.max_grad_norm is not None:
                 nn.utils.clip_grad_norm(self.actors[agent_id].parameters(), self.max_grad_norm)
             self.actor_optimizers[agent_id].step()
@@ -278,11 +279,11 @@ class MAA2C(Agent):
             #         logger.scalar_summary(tag, value, step+1)
 
 
-            #     # (2) Log values and gradients of the parameters (histogram)
-            #     for tag, value in self.actors[agent_id].named_parameters():
-            #         tag = tag.replace('.', '/')
-            #         logger.histo_summary(tag, to_np(value), step+1) # from Parameter to np.array
-            #         logger.histo_summary(tag+'/grad', to_np(value.grad), step+1)# from Variable to np.array
+            #     # # (2) Log values and gradients of the parameters (histogram)
+            #     # for tag, value in self.actors[agent_id].named_parameters():
+            #     #     tag = tag.replace('.', '/')
+            #     #     logger.histo_summary(tag, to_np(value), step+1) # from Parameter to np.array
+            #     #     logger.histo_summary(tag+'/grad', to_np(value.grad), step+1)# from Variable to np.array
 
             #     for tag, value in self.critics[agent_id].named_parameters():
             #         tag = tag.replace('.', '/')
@@ -370,8 +371,8 @@ class MAA2C(Agent):
         one_hot_actions = []
 
         softmax_actions = self._softmax_action(state)
-        for agent_id in range(self.n_agents):
-            # print(softmax_actions[agent_id])
+        # print(softmax_actions)
+        for agent_id in range(self.n_agents): 
             actions[agent_id] = np.argmax(softmax_actions[agent_id])
             one_hot_actions.append(index_to_one_hot(actions[agent_id],self.act_shape_n[agent_id]))
         return one_hot_actions
